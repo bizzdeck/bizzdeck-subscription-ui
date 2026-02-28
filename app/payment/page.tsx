@@ -107,8 +107,10 @@ export default function PaymentPage() {
       description: `${planDetails?.name || 'Professional'} Plan - Monthly`,
       subscription_id: subscriptionId, // Use subscription_id from backend
       handler: function (response:any) {
-        alert('Payment successful! Payment ID: ' + response.razorpay_payment_id);
-        // Redirect or update UI as needed
+        // Redirect to success page with payment details
+        router.push(
+          `/payment-result?status=success&paymentId=${response.razorpay_payment_id}&subscriptionId=${subscriptionId}`
+        )
       },
       prefill: {
         name: user?.name || '',
@@ -130,8 +132,11 @@ export default function PaymentPage() {
     };
 
     const rzp = new (window as any).Razorpay(options);
-    rzp.on('payment.failed', function () {
-      alert('Oops, something went wrong. Payment failed.');
+    rzp.on('payment.failed', function (response: any) {
+      // Redirect to failure page with error details
+      router.push(
+        `/payment-result?status=failure&error=${encodeURIComponent(response.error.description)}`
+      )
       setIsProcessing(false);
     });
     rzp.open();
