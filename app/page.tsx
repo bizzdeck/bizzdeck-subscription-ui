@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, Suspense } from "react"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Check, Zap, Crown, Rocket, ArrowLeft } from "lucide-react"
@@ -11,6 +11,21 @@ import { useAuth } from "../app/authContext"
 const PRIMARY_COLOR = "#164B53"
 
 export default function PlansPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-12 h-12 rounded-full border-4 border-gray-200 border-t-4 animate-spin mx-auto mb-4" style={{ borderTopColor: PRIMARY_COLOR }}></div>
+          <p className="text-gray-600 font-medium">Loading plans...</p>
+        </div>
+      </div>
+    }>
+      <PlansPageContent />
+    </Suspense>
+  )
+}
+
+function PlansPageContent() {
   const [plans, setPlans] = useState<Plan[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [tokenError, setTokenError] = useState<string | null>(null)
