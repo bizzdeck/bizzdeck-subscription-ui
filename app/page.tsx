@@ -1,298 +1,315 @@
 "use client"
 
-import { useEffect, useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
+import { useState, useEffect } from "react"
 import { Card } from "@/components/ui/card"
-import { useRouter } from 'next/navigation';
-import { useAuth } from "./authContext"
-import { Phone, Lock, ArrowRight, CheckCircle } from "lucide-react"
-import { postFetch } from "@/lib/apiService"
+import { Button } from "@/components/ui/button"
+import { Check, Zap, Crown, Rocket, ArrowLeft } from "lucide-react"
+import { useRouter, useSearchParams } from "next/navigation"
+import { getAllPlans, Plan } from "@/lib/plans"
+import { useAuth } from "../app/authContext"
 
 const PRIMARY_COLOR = "#164B53"
 
-export default function LoginPage() {
-  const [phoneNumber, setPhoneNumber] = useState("")
-  const [otp, setOtp] = useState("")
-  const [otpSent, setOtpSent] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
-  const [msg91AccessToken, setMsg91AccessToken] = useState("")
-  const [error, setError] = useState("")
-  const router = useRouter();
-  const { login } = useAuth();
+export default function PlansPage() {
+  const [plans, setPlans] = useState<Plan[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [tokenError, setTokenError] = useState<string | null>(null)
+  const [token, setToken] = useState<string | null>(null)
+  const { login, userRedirectionInfo } = useAuth();
 
-  const sendOtp = async () => {
-    if (!phoneNumber || phoneNumber.length < 10) {
-      setError("Please enter a valid phone number")
-      return
+  const router = useRouter()
+  const searchParams = useSearchParams()
+
+  useEffect(() => {
+    // Check for token query parameter
+    const tokenFromQuery = searchParams?.get("token") || ''
+    if(!tokenFromQuery){
+      setTokenError("No token provided. Please try again.")
     }
-    setError("")
-    setIsLoading(true);
-    (window as any).sendOtp(
-      `91${phoneNumber}`, // mandatory
-      (data: any) => {
-        console.log('OTP sent successfully.', data)
-        setOtpSent(true)
-        setIsLoading(false)
-      },
-      (error: any) => {
-        console.log('Error occurred', error)
-        setError("Failed to send OTP. Please try again.")
-        setIsLoading(false)
-      }
-    );
-  };
+    setToken(tokenFromQuery)
 
-  const verifyOtp = async () => {
-    if (!otp || otp.length < 4) {
-      setError("Please enter a valid OTP")
-      return
+    if (tokenFromQuery) {
+      // Call API with token
+      
+      fetchPaymentData(tokenFromQuery)
+    } else {
+      // Load plans normally
+      loadPlans()
     }
-    setError("")
-    setIsLoading(true);
-    (window as any).verifyOtp(
-      otp, // OTP value
-      (data: any) => {
-        console.log('OTP verified: ', data)
-        setMsg91AccessToken(data.message)
-        setIsLoading(false)
-      },
-      (error: any) => {
-        console.log(error)
-        setError("Invalid OTP. Please try again.")
-        setIsLoading(false)
-      },
-    );
-  };
+  }, [searchParams])
 
-  const fetchUserDetails = async () => {
+  const fetchPaymentData = async (token: string) => {
     try {
-      const response = await postFetch(
-        'https://api.bizzdeck.com/v1/users/signin',
-        {
-          payload: {
-            phoneNumber: '+91' + phoneNumber,
-            token: msg91AccessToken
-          }
-        }
-      )
-
-      if (!response.success) {
-        setError("Failed to sign in. Please try again.")
-        setIsLoading(false)
-        return
+      setIsLoading(true)
+      const response = await fetch(`https://api.bizzdeck.com/v1/payment/token`, {
+        method: 'POST',
+        body: JSON.stringify({ "paymentToken": token }),
+      })
+      
+      if (!response.ok) {
+        throw new Error(`API error: ${response.status}`)
       }
-
-      console.log("userDetails", response.data);
-      setIsLoading(false)
-      login(response.data.data);
-      router.push("/restaurants")
-    } catch (err) {
-      setError("Failed to sign in. Please try again.")
+      
+      const data = await response.json()
+      login(data.data)
+      // Load plans
+      setTimeout(() => {
+        setPlans(getAllPlans())
+        setIsLoading(false)
+      }, 500)
+      
+      // You can handle the token data here - store it, redirect, etc.
+      // For now, we'll log it and continue to the plans page
+    } catch (error) {
+      console.error("Error fetching payment data:", error)
+      setTokenError("Failed to validate token. Please try again.")
       setIsLoading(false)
     }
   }
 
-  useEffect(() => {
-    if (msg91AccessToken) {
-      console.log("msg91AccessToken", msg91AccessToken);
-      fetchUserDetails();
-    }
-  }, [msg91AccessToken]);
+  const loadPlans = () => {
 
-  const handleKeyPress = (e: React.KeyboardEvent, callback: () => void) => {
-    if (e.key === 'Enter') {
-      callback()
-    }
+    // TODO: Replace with your API call to fetch plans
+    // const response = await fetch(`/api/plans?restaurantId=${restaurantId}`)
+    // const data = await response.json()
+    // setPlans(data)
+
+    // Simulate API call
+    setTimeout(() => {
+      setPlans(getAllPlans())
+      setIsLoading(false)
+    }, 500)
+  }
+
+  const handleSelectPlan = (planId: string) => {
+    sessionStorage.setItem("selectedPlan", planId)
+    router.push(`/payment?plan=${planId}`)
+  }
+
+  const getPlanIcon = (index: number) => {
+    const icons = [
+      <Zap key="lite" className="w-6 h-6" />,
+      <Crown key="plus" className="w-6 h-6" />,
+      <Rocket key="pro" className="w-6 h-6" />
+    ]
+    return icons[index] || icons[0]
+  }
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-12 h-12 rounded-full border-4 border-gray-200 border-t-4 animate-spin mx-auto mb-4" style={{ borderTopColor: PRIMARY_COLOR }}></div>
+          <p className="text-gray-600 font-medium">Loading plans...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (tokenError || !token) {
+    return (
+      <div className="min-h-screen flex items-center justify-center px-4 py-12" style={{ background: "linear-gradient(135deg, #f5f7fa 0%, #e9ecef 100%)" }}>
+        <Card className="w-full max-w-md overflow-hidden">
+          {/* Red accent bar */}
+          <div style={{ background: "#EF4444", height: "4px" }}></div>
+          
+          <div className="p-12">
+            {/* Illustration */}
+            <div className="text-center mb-8">
+              <svg className="w-24 h-24 mx-auto mb-6" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+                {/* Lock Icon */}
+                <circle cx="100" cy="100" r="95" fill="#FEE2E2" opacity="0.5" stroke="#FCA5A5" strokeWidth="2"/>
+                <rect x="70" y="90" width="60" height="65" rx="8" fill="none" stroke="#EF4444" strokeWidth="3"/>
+                <path d="M85 90V70C85 57.85 94.85 48 107 48C119.15 48 129 57.85 129 70V90" fill="none" stroke="#EF4444" strokeWidth="3" strokeLinecap="round"/>
+                <circle cx="100" cy="128" r="4" fill="#EF4444"/>
+              </svg>
+            </div>
+
+            {/* Content */}
+            <div className="text-center mb-8">
+              <h2 className="text-3xl font-bold text-gray-900 mb-2">Access Denied</h2>
+              <p className="text-gray-600 text-sm mb-4">
+                {tokenError || "Invalid or missing token"}
+              </p>
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+                <p className="text-xs text-red-700">
+                  <span className="font-semibold">Why this happened:</span>
+                  <br />
+                  Your authentication token is invalid, expired, or missing. Please request a new link from the sender.
+                </p>
+              </div>
+            </div>
+
+            {/* Help text */}
+            <div className="pt-6 border-t border-gray-200">
+              <p className="text-xs text-gray-500 text-center">
+                Need help? Contact our support team at{" "}
+                <a href="mailto:support@bizzdeck.com" className="font-semibold hover:underline" style={{ color: PRIMARY_COLOR }}>
+                  support@bizzdeck.com
+                </a>
+              </p>
+            </div>
+          </div>
+        </Card>
+      </div>
+    )
   }
 
   return (
-    <div 
-      className="min-h-screen flex items-center justify-center px-4 py-8"
-      style={{ background: "linear-gradient(135deg, #f5f7fa 0%, #e9ecef 100%)" }}
-    >
-      <div className="w-full max-w-md">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <div 
-            className="inline-flex items-center justify-center w-16 h-16 rounded-full mb-4"
-            style={{ background: `${PRIMARY_COLOR}15` }}
+    <div className="min-h-screen" style={{ background: "linear-gradient(135deg, #f5f7fa 0%, #e9ecef 100%)" }}>
+      {/* Header */}
+      <header style={{ background: PRIMARY_COLOR }} className="text-white py-16">
+        <div className="max-w-7xl mx-auto px-4">
+          <Button
+            variant="ghost"
+            className="mb-6 text-white hover:bg-white/20 transition-colors"
+            onClick={() => router.push("/restaurants")}
           >
-            <Lock className="w-8 h-8" style={{ color: PRIMARY_COLOR }} />
-          </div>
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">Welcome to BizzDeck</h1>
-          <p className="text-gray-600">Sign in to manage your restaurant subscriptions</p>
-        </div>
-
-        {/* Main Card */}
-        <Card className="p-8 shadow-xl">
-          <div className="space-y-6">
-            {/* Phone Number Field */}
-            <div className="space-y-3">
-              <Label htmlFor="phone" className="text-sm font-semibold text-gray-900">
-                Phone Number
-              </Label>
-              <div className="relative">
-                <Phone className="absolute left-3 top-3.5 w-5 h-5 text-gray-400" />
-                <Input
-                  id="phone"
-                  type="tel"
-                  placeholder="10 digit number"
-                  value={phoneNumber}
-                  onChange={(e) => {
-                    const value = e.target.value.replace(/\D/g, '').slice(0, 10)
-                    setPhoneNumber(value)
-                    setError("")
-                  }}
-                  onKeyPress={(e) => !otpSent && handleKeyPress(e, sendOtp)}
-                  disabled={otpSent}
-                  className="pl-10 h-11 border-2 border-gray-200 focus:border-blue-500"
-                  style={{
-                    borderColor: otpSent ? "#e5e7eb" : undefined,
-                    opacity: otpSent ? 0.6 : 1
-                  }}
-                />
-              </div>
-              <p className="text-xs text-gray-500">Enter your 10-digit mobile number</p>
-            </div>
-
-            {/* OTP Field */}
-            {otpSent && (
-              <div className="space-y-3 animate-in fade-in duration-300">
-                <Label htmlFor="otp" className="text-sm font-semibold text-gray-900">
-                  Enter OTP
-                </Label>
-                <Input
-                  id="otp"
-                  type="text"
-                  placeholder="0000"
-                  maxLength={4}
-                  value={otp}
-                  onChange={(e) => {
-                    const value = e.target.value.replace(/\D/g, '').slice(0, 4)
-                    setOtp(value)
-                    setError("")
-                  }}
-                  onKeyPress={(e) => handleKeyPress(e, verifyOtp)}
-                  className="h-11 border-2 border-gray-200 focus:border-blue-500 text-center tracking-widest"
-                />
-                <p className="text-xs text-gray-500">6-digit code sent to +91{phoneNumber}</p>
-              </div>
-            )}
-
-            {/* Error Message */}
-            {error && (
-              <div className="p-3 bg-red-50 border border-red-200 rounded-lg animate-in fade-in duration-300">
-                <p className="text-sm text-red-700 font-medium">{error}</p>
-              </div>
-            )}
-
-            {/* Buttons */}
-            {!otpSent ? (
-              <Button 
-                className="w-full h-11 text-base font-semibold text-white transition-all duration-200"
-                style={{ background: PRIMARY_COLOR }}
-                onClick={sendOtp} 
-                disabled={!phoneNumber || isLoading}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.boxShadow = `0 4px 12px ${PRIMARY_COLOR}40`
-                  e.currentTarget.style.transform = "translateY(-2px)"
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.boxShadow = "none"
-                  e.currentTarget.style.transform = "translateY(0)"
-                }}
-              >
-                {isLoading ? (
-                  <span className="flex items-center gap-2">
-                    <span className="animate-spin">⏳</span> Sending OTP...
-                  </span>
-                ) : (
-                  <span className="flex items-center justify-center gap-2">
-                    Send OTP
-                    <ArrowRight className="w-4 h-4" />
-                  </span>
-                )}
-              </Button>
-            ) : (
-              <div className="space-y-3">
-                <Button 
-                  className="w-full h-11 text-base font-semibold text-white transition-all duration-200"
-                  style={{ background: PRIMARY_COLOR }}
-                  onClick={verifyOtp} 
-                  disabled={!otp || isLoading}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.boxShadow = `0 4px 12px ${PRIMARY_COLOR}40`
-                    e.currentTarget.style.transform = "translateY(-2px)"
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.boxShadow = "none"
-                    e.currentTarget.style.transform = "translateY(0)"
-                  }}
-                >
-                  {isLoading ? (
-                    <span className="flex items-center gap-2">
-                      <span className="animate-spin">⏳</span> Verifying...
-                    </span>
-                  ) : (
-                    <span className="flex items-center justify-center gap-2">
-                      Verify & Login
-                      <CheckCircle className="w-4 h-4" />
-                    </span>
-                  )}
-                </Button>
-                <Button
-                  variant="outline"
-                  className="w-full h-11 text-base font-semibold transition-all duration-200"
-                  style={{
-                    color: PRIMARY_COLOR,
-                    borderColor: PRIMARY_COLOR,
-                    background: "transparent"
-                  }}
-                  onClick={() => {
-                    setOtpSent(false)
-                    setOtp("")
-                    setError("")
-                  }}
-                >
-                  Change Number
-                </Button>
-              </div>
-            )}
-          </div>
-
-          {/* Footer */}
-          <div className="mt-6 pt-6 border-t border-gray-200 text-center">
-            <p className="text-xs text-gray-500">
-              By signing in, you agree to our{" "}
-              <span style={{ color: PRIMARY_COLOR }} className="font-semibold cursor-pointer hover:underline">
-                Terms of Service
-              </span>
-              {" "}and{" "}
-              <span style={{ color: PRIMARY_COLOR }} className="font-semibold cursor-pointer hover:underline">
-                Privacy Policy
-              </span>
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back to Restaurants
+          </Button>
+          <div className="text-center">
+            <h1 className="text-5xl font-bold mb-4">Choose Your Perfect Plan</h1>
+            <p className="text-lg text-white/80 max-w-2xl mx-auto">
+              Select a plan that fits your restaurant's needs. Scale as you grow.
             </p>
           </div>
-        </Card>
+        </div>
+      </header>
 
-        {/* Trust Badges */}
-        <div className="mt-8 grid grid-cols-3 gap-4 text-center">
-          <div className="text-sm">
-            <div className="text-xl font-bold mb-1" style={{ color: PRIMARY_COLOR }}>🔒</div>
-            <p className="text-gray-600 text-xs">Secure</p>
+      {/* Main Content */}
+      <main className="max-w-7xl mx-auto px-4 py-16">
+        <div className="grid md:grid-cols-3 gap-8">
+          {plans.map((plan, index) => (
+            <div key={plan.id} className="relative group">
+              {plan.popular && (
+                <div className="absolute -top-5 left-0 right-0 flex justify-center z-10">
+                  <span 
+                    className="inline-block px-4 py-2 rounded-full text-white text-xs font-bold uppercase tracking-wider shadow-lg"
+                    style={{ background: PRIMARY_COLOR, marginTop: "-17px" }}
+                  >
+                    ⭐ Most Popular
+                  </span>
+                </div>
+              )}
+
+              <Card 
+                className={`h-full overflow-hidden transition-all duration-300 transform ${
+                  plan.popular 
+                    ? "shadow-2xl scale-105" 
+                    : "shadow-lg hover:shadow-xl hover:scale-102"
+                }`}
+                style={{
+                  border: plan.popular ? `2px solid ${PRIMARY_COLOR}` : "1px solid #e0e0e0",
+                  display: "flex",
+                  flexDirection: "column",
+                  justifyContent: "space-between"
+                }}
+              >
+                {/* Header */}
+                <div 
+                  style={{ background: plan.popular ? PRIMARY_COLOR : "linear-gradient(135deg, #f5f7fa 0%, #e9ecef 100%)" }}
+                  className={`p-8 text-center ${plan.popular ? "text-white" : ""}`}
+                >
+                  <div className="flex justify-center mb-4">
+                    <div 
+                      className="p-3 rounded-full"
+                      style={{ background: plan.popular ? "rgba(255,255,255,0.2)" : "#f0f0f0" }}
+                    >
+                      <div style={{ color: plan.popular ? "white" : PRIMARY_COLOR }}>
+                        {getPlanIcon(index)}
+                      </div>
+                    </div>
+                  </div>
+                  <h3 className={`text-2xl font-bold mb-2 ${plan.popular ? "text-white" : "text-gray-900"}`}>
+                    {plan.name}
+                  </h3>
+                  <div className="flex items-baseline justify-center gap-1">
+                    <span className={`text-4xl font-bold ${plan.popular ? "text-white" : "text-gray-900"}`}>
+                      ₹{plan.price}
+                    </span>
+                    <span className={plan.popular ? "text-white/80" : "text-gray-600"}>
+                      /{plan.interval}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Content */}
+                <div className="p-8 flex-grow flex flex-col">
+                  {/* Features */}
+                  <div className="mb-8">
+                    <ul className="space-y-4">
+                      {plan.features.map((feature, idx) => (
+                        <li key={idx} className="flex items-start gap-3">
+                          <Check 
+                            className="w-5 h-5 flex-shrink-0 mt-0.5 font-bold"
+                            style={{ color: PRIMARY_COLOR }}
+                          />
+                          <span className="text-sm text-gray-700 leading-relaxed">{feature}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  {/* Divider */}
+                  <div className="border-t border-gray-200 mb-8"></div>
+
+                  {/* Additional Info */}
+                  <div className="text-xs text-gray-500 space-y-2 mb-8">
+                    <p>✓ Cancel anytime</p>
+                    <p>✓ 7-day money back guarantee</p>
+                    <p>✓ No hidden charges</p>
+                  </div>
+                </div>
+
+                {/* Footer Button */}
+                <div className="px-8 pb-8">
+                  <Button
+                    className="w-full h-12 text-base font-semibold transition-all duration-200"
+                    style={{
+                      background: plan.popular ? PRIMARY_COLOR : "white",
+                      color: plan.popular ? "white" : PRIMARY_COLOR,
+                      border: plan.popular ? "none" : `2px solid ${PRIMARY_COLOR}`,
+                      boxShadow: plan.popular ? `0 4px 15px ${PRIMARY_COLOR}33` : "none"
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!plan.popular) {
+                        e.currentTarget.style.background = PRIMARY_COLOR
+                        e.currentTarget.style.color = "white"
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!plan.popular) {
+                        e.currentTarget.style.background = "white"
+                        e.currentTarget.style.color = PRIMARY_COLOR
+                      }
+                    }}
+                    onClick={() => handleSelectPlan(plan.planAccessName)}
+                  >
+                    {plan.popular ? "Start Now" : "Select Plan"}
+                  </Button>
+                </div>
+              </Card>
+            </div>
+          ))}
+        </div>
+
+        {/* Trust Section */}
+        <div className="mt-20 grid md:grid-cols-3 gap-8 text-center">
+          <div>
+            <div className="text-3xl font-bold mb-2" style={{ color: PRIMARY_COLOR }}>500+</div>
+            <p className="text-gray-600">Active Restaurants</p>
           </div>
-          <div className="text-sm">
-            <div className="text-xl font-bold mb-1" style={{ color: PRIMARY_COLOR }}>✓</div>
-            <p className="text-gray-600 text-xs">Verified</p>
+          <div>
+            <div className="text-3xl font-bold mb-2" style={{ color: PRIMARY_COLOR }}>4.9★</div>
+            <p className="text-gray-600">Average Rating</p>
           </div>
-          <div className="text-sm">
-            <div className="text-xl font-bold mb-1" style={{ color: PRIMARY_COLOR }}>⚡</div>
-            <p className="text-gray-600 text-xs">Instant</p>
+          <div>
+            <div className="text-3xl font-bold mb-2" style={{ color: PRIMARY_COLOR }}>24/7</div>
+            <p className="text-gray-600">Customer Support</p>
           </div>
         </div>
-      </div>
+      </main>
     </div>
   )
 }

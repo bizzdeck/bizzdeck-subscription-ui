@@ -12,27 +12,17 @@ import {
    Types
 ======================== */
 
-export interface User {
-  id: number;
-  name: string;
-  phoneNumber: string;
-  restaurants: Restaurant[];
-  token: string;
-}
-
-export interface Restaurant {
-  id: number|string;
-  name: string;
-  location: string;
-  fssaiExpiryDate: string | null;
-  fssaiAboutToExpire: boolean;
-}
 
 interface AuthContextType {
-  user: User | null;
+  userRedirectionInfo: UserRedirectionInfo | null;
   isAuthenticated: boolean;
-  login: (userData: User) => void;
+  login: (userData: UserRedirectionInfo) => void;
   logout: () => void;
+}
+
+interface UserRedirectionInfo{
+  authToken: string;
+  restaurantId: number;
 }
 
 /* ========================
@@ -50,22 +40,22 @@ interface AuthProviderProps {
 }
 
 export const AuthProvider = ({ children }: AuthProviderProps) => {
-  const [user, setUser] = useState<User | null>(null);
+  const [userRedirectionInfo, setUserRedirectionInfo] = useState<UserRedirectionInfo | null>(null);
 
-  const isAuthenticated = Boolean(user);
+  const isAuthenticated = Boolean(userRedirectionInfo);
 
-  const login = (userData: User) => {
-    setUser(userData);
+  const login = (userData: UserRedirectionInfo) => {
+    setUserRedirectionInfo(userData);
   };
 
   const logout = () => {
-    setUser(null);
+    setUserRedirectionInfo(null);
   };
 
   return (
     <AuthContext.Provider
       value={{
-        user,
+        userRedirectionInfo,
         isAuthenticated,
         login,
         logout,

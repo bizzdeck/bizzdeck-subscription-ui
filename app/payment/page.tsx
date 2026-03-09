@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, use } from "react"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { ArrowLeft, Check } from "lucide-react"
@@ -14,25 +14,29 @@ export default function PaymentPage() {
   const [selectedRestaurant, setSelectedRestaurant] = useState<number | null>(null)
   const [isProcessing, setIsProcessing] = useState(false)
   const [planDetails, setPlanDetails] = useState<Plan | null>(null)
-  const { user } = useAuth();
+  const { userRedirectionInfo } = useAuth();
   const router = useRouter()
   
   const PRIMARY_COLOR = "#164B53"
 
   useEffect(() => {
-    if (!user) {
+    console.log("userRedirectionInfo from Payment", userRedirectionInfo);
+    
+    if (!userRedirectionInfo) {
       sessionStorage.clear();
       router.push("/");
     }
-  }, [user, router])
+  }, [userRedirectionInfo, router])
+
 
   useEffect(() => {
+    
     const searchParams = new URLSearchParams(window.location.search)
     const planAccessName = searchParams.get("plan")
-    const restaurantId = searchParams.get("restaurantId")
+    const restaurantId = userRedirectionInfo?.restaurantId
     
     setSelectedPlan(planAccessName)
-    setSelectedRestaurant(restaurantId ? parseInt(restaurantId) : null)
+    setSelectedRestaurant(restaurantId || null)
     
     // Get plan details using the planAccessName
     if (planAccessName) {
@@ -81,7 +85,7 @@ export default function PaymentPage() {
         {
           payload,
           headers: {
-            'Authorization': `Bearer ${user?.token}`
+            'Authorization': `Bearer ${userRedirectionInfo?.authToken}`
           }
         }
       )
@@ -113,9 +117,9 @@ export default function PaymentPage() {
         )
       },
       prefill: {
-        name: user?.name || '',
+        name: 'BizzDeck User',
         email: '',
-        contact: user?.phoneNumber || '',
+        contact: '',
       },
       notes: {
         plan: selectedPlan || '',
