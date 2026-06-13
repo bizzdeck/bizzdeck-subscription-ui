@@ -106,7 +106,7 @@ export default function PaymentPage() {
     }
 
     const options = {
-      key: 'rzp_test_SKOnITDPocKsEh', // Replace with your Razorpay key id
+      key: 'rzp_live_T15znFpjFQVn3t', // Razorpay live publishable key id
       name: 'BizzDeck',
       description: `${planDetails?.name || 'Professional'} Plan - Monthly`,
       subscription_id: subscriptionId, // Use subscription_id from backend

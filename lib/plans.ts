@@ -16,7 +16,7 @@ export type Plan = {
 
 export const PLANS: Record<PlanType, Plan> = {
   [PlanType.LITE]: {
-    id: "plan_SKOpomW5AERzfn",
+    id: "plan_T14i73GPqLGZN2",
     planAccessName: PlanType.LITE,
     name: "BizzDeck Lite",
     price: 999,
@@ -28,7 +28,7 @@ export const PLANS: Record<PlanType, Plan> = {
     ],
   },
   [PlanType.PLUS]: {
-    id: "plan_SKOqPlPTRkolaC",
+    id: "plan_T14fcbfYSdP4sB",
     planAccessName: PlanType.PLUS,
     name: "Professional",
     price: 2499,
@@ -42,7 +42,7 @@ export const PLANS: Record<PlanType, Plan> = {
     popular: true,
   },
   [PlanType.PRO]: {
-    id: "plan_SKOqt3u67YtzY5",
+    id: "plan_T14Ol5zrMehE60",
     planAccessName: PlanType.PRO,
     name: "Enterprise",
     price: 3499,
