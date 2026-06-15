@@ -19,7 +19,7 @@ export const PLANS: Record<PlanType, Plan> = {
     id: "plan_T14i73GPqLGZN2",
     planAccessName: PlanType.LITE,
     name: "BizzDeck Lite",
-    price: 999,
+    price: 1000,
     interval: "month",
     features: [
       "Insights: Profitability Checker",
@@ -31,7 +31,7 @@ export const PLANS: Record<PlanType, Plan> = {
     id: "plan_T14fcbfYSdP4sB",
     planAccessName: PlanType.PLUS,
     name: "Professional",
-    price: 2499,
+    price: 2500,
     interval: "month",
     features: [
       "Insights: Profitability Checker",
@@ -45,7 +45,7 @@ export const PLANS: Record<PlanType, Plan> = {
     id: "plan_T14Ol5zrMehE60",
     planAccessName: PlanType.PRO,
     name: "Enterprise",
-    price: 3499,
+    price: 3500,
     interval: "month",
     features: [
       "Insights: Profitability Checker",
