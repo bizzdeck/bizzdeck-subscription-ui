@@ -242,6 +242,12 @@ function PlansPageContent() {
                   <div className="flex items-baseline justify-center gap-1">
                     <span className={`text-4xl font-bold ${plan.popular ? "text-white" : "text-gray-900"}`}>
                       ₹{plan.price}
+                      <span
+                        className={`text-xs font-medium ml-1 ${plan.popular ? "text-white/80" : "text-gray-600"}`}
+                        style={{ verticalAlign: "super", display: "inline-block", transform: "translateY(-0.15em)" }}
+                      >
+                        +gst
+                      </span>
                     </span>
                     <span className={plan.popular ? "text-white/80" : "text-gray-600"}>
                       /{plan.interval}
